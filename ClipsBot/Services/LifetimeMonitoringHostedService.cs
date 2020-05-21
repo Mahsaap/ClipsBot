@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace ClipsBot.Services
 {
-    public class LifetimeMonitoringHostedService : IHostedService
+    class LifetimeMonitoringHostedService : IHostedService
     {
         private readonly ILogger<LifetimeMonitoringHostedService> _logger;
 
