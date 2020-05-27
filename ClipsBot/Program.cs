@@ -20,7 +20,9 @@ namespace ClipsBot
             })
             .ConfigureServices(services =>
             {
+                services.AddHostedService<Twitch>();
                 services.AddHostedService<DiscordClient>();
+                
             })
             .UseConsoleLifetime();
     }

@@ -1,16 +1,12 @@
 ﻿using ClipsBot.Ignore;
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+
 using System.Threading;
 using System.Threading.Tasks;
+using TwitchLib.Api;
 
 namespace ClipsBot.Services
 {
@@ -19,10 +15,12 @@ namespace ClipsBot.Services
         public DiscordSocketClient Client { get; private set; }
 
         private readonly ILogger<DiscordClient> _logger;
+        private readonly TwitchAPI _api;
 
-        public DiscordClient(ILogger<DiscordClient> logger)
+        public DiscordClient(ILogger<DiscordClient> logger, TwitchAPI api)
         {
             _logger = logger;
+            _api = api;
         }
 
         public async Task RunAsync()
@@ -34,7 +32,7 @@ namespace ClipsBot.Services
             Client.Log += Client_Log;
             Client.MessageReceived += Client_MessageReceived;
 
-            await Client.LoginAsync(TokenType.Bot, Token.token);
+            await Client.LoginAsync(TokenType.Bot, DiscordToken.Token);
             await Client.StartAsync();
 
             _logger.LogInformation("Discord Client Started!");
@@ -46,21 +44,23 @@ namespace ClipsBot.Services
         {
             if (arg.Author.Id == Client.CurrentUser.Id || arg.Author.IsBot) return;
 
-            if (arg.Channel.Id == Channels.checkChannel)
-            {
-                var toChan = Client.GetChannel(Channels.toChannel) as ISocketMessageChannel;
-                bool dr2 = false;
-                foreach (var embed in arg.Embeds)
-                {                    
-                    dr2 = embed.Description.Contains("Dirt Rally 2.0");
-                    _logger.LogDebug("Checking Embed for Dirt Rally 2.0");
-                }
-                if (dr2)
-                {
-                    _logger.LogInformation("Dirt Rally 2.0 Clip found and reposted.");
-                    await toChan.SendMessageAsync(arg.Content);                    
-                }
+            if (arg.Channel.Id != Channels.CheckChannel) return;
+
+            var clip = await _api.V5.Clips.GetClipAsync("");
+            
+            var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
+            bool dr2 = false;
+            foreach (var embed in arg.Embeds)
+            {                    
+                dr2 = embed.Description.Contains("Dirt Rally 2.0");
+                _logger.LogDebug("Checking Embed for Dirt Rally 2.0");
             }
+            if (dr2)
+            {
+                _logger.LogInformation("Dirt Rally 2.0 Clip found and reposted.");
+                await toChan.SendMessageAsync(arg.Content);                    
+            }
+            
             _logger.LogDebug(arg.Content);
             await Task.CompletedTask;            
         }
