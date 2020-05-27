@@ -64,16 +64,16 @@ namespace ClipsBot.Services
                 bool dr2 = embed.Description.ToLower().Contains("dirt rally 2.0");
                 if (dr2)
                 {
-                    //Console.WriteLine($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip found and reposted");
+                    _logger.LogInformation($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip found and reposted");
                     await toChan.SendMessageAsync(embed.Url);
                 }
                 else
                 {
-                    //Console.WriteLine($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip NOT found and ignored");
+                    _logger.LogInformation($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip NOT found and ignored");
                 }
             }
 
-            //Console.WriteLine($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
+            _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
             //await Task.CompletedTask;          
         }
 
