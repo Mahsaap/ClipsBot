@@ -3,24 +3,35 @@ using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
+using TwitchLib.Api.V5.Models.Clips;
 
 namespace ClipsBot.Services
 {
     public class DiscordClient : IHostedService
     {
         public DiscordSocketClient Client { get; private set; }
+        public TwitchAPI API { get; private set; }
 
         private readonly ILogger<DiscordClient> _logger;
-        private readonly TwitchAPI _api;
 
-        public DiscordClient(ILogger<DiscordClient> logger, TwitchAPI api)
+        public DiscordClient(ILogger<DiscordClient> logger)
         {
             _logger = logger;
-            _api = api;
+            Twitch();
+        }
+
+        public void Twitch()
+        {
+            API = new TwitchAPI();
+
+            API.Settings.ClientId = TwitchCreds.ClientID;
+            API.Settings.Secret = TwitchCreds.Secret;
+
+            _logger.LogInformation("Twitch API Initiated");
         }
 
         public async Task RunAsync()
@@ -46,35 +57,34 @@ namespace ClipsBot.Services
             if (arg.Author.Id == Client.CurrentUser.Id || arg.Author.IsBot) return;
             if (arg.Channel.Id != Channels.CheckChannel) return;
 
-            var clip = await _api.V5.Clips.GetClipAsync("");
-
-            /*
-             * https://clips.twitch.tv/CredulousAssiduousWombatMrDestructoid
-             * https://www.twitch.tv/juniorrallychampionship/clip/BoredPoorCardKappaClaus
-             */
-            if (clip.Game != "") return; //Check for DR2
-
-
-            var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
-            var msg = arg.Channel.GetCachedMessage(arg.Id);
-
-            foreach (var embed in msg.Embeds)
+            var linkParser = new Regex(@"\b(?:https?://|www\.)\S+\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var link = linkParser.Matches(arg.Content)[0].Value;
+            int pos = link.LastIndexOf("/") + 1;
+            var slug = link[pos..];
+            try
             {
-                //Console.WriteLine($"{Globals.CurrentTime} Detect      Checking Embed for Dirt Rally 2.0");
-                bool dr2 = embed.Description.ToLower().Contains("dirt rally 2.0");
-                if (dr2)
+                var clip = await API.V5.Clips.GetClipAsync(slug);                
+
+                var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
+
+                if (clip.Game.ToLower() == "dirt rally 2.0")
                 {
                     _logger.LogInformation($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip found and reposted");
-                    await toChan.SendMessageAsync(embed.Url);
+                    await toChan.SendMessageAsync(clip.Url);
                 }
                 else
                 {
                     _logger.LogInformation($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip NOT found and ignored");
                 }
+                _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");      
             }
+            catch { }
 
-            _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
-            //await Task.CompletedTask;          
+            /*
+             * https://clips.twitch.tv/CredulousAssiduousWombatMrDestructoid
+             * https://www.twitch.tv/juniorrallychampionship/clip/BoredPoorCardKappaClaus
+             */
+            
         }
 
         private Task Client_Log(LogMessage arg)
