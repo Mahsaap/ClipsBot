@@ -14,24 +14,14 @@ namespace ClipsBot.Services
     public class DiscordClient : IHostedService
     {
         public DiscordSocketClient Client { get; private set; }
-        public TwitchAPI API { get; private set; }
 
         private readonly ILogger<DiscordClient> _logger;
+        private readonly TwitchAPI _api;
 
-        public DiscordClient(ILogger<DiscordClient> logger)
+        public DiscordClient(ILogger<DiscordClient> logger, TwitchAPI api)
         {
             _logger = logger;
-            Twitch();
-        }
-
-        public void Twitch()
-        {
-            API = new TwitchAPI();
-
-            API.Settings.ClientId = TwitchCreds.ClientID;
-            API.Settings.Secret = TwitchCreds.Secret;
-
-            _logger.LogInformation($"{Globals.CurrentTime} Twitch API Initiated");
+            _api = api;
         }
 
         public async Task RunAsync()
@@ -63,7 +53,7 @@ namespace ClipsBot.Services
             var slug = link[pos..];
             try
             {
-                var clip = await API.V5.Clips.GetClipAsync(slug);                
+                var clip = await _api.V5.Clips.GetClipAsync(slug);                
 
                 var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
 
