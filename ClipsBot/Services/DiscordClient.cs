@@ -42,27 +42,39 @@ namespace ClipsBot.Services
 
         private async Task Client_MessageReceived(SocketMessage arg)
         {
+            if (string.IsNullOrEmpty(arg.Content)) return;
             if (arg.Author.Id == Client.CurrentUser.Id || arg.Author.IsBot) return;
-
             if (arg.Channel.Id != Channels.CheckChannel) return;
 
             var clip = await _api.V5.Clips.GetClipAsync("");
-            
+
+            /*
+             * https://clips.twitch.tv/CredulousAssiduousWombatMrDestructoid
+             * https://www.twitch.tv/juniorrallychampionship/clip/BoredPoorCardKappaClaus
+             */
+            if (clip.Game != "") return; //Check for DR2
+
+
             var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
-            bool dr2 = false;
-            foreach (var embed in arg.Embeds)
-            {                    
-                dr2 = embed.Description.Contains("Dirt Rally 2.0");
-                _logger.LogDebug("Checking Embed for Dirt Rally 2.0");
-            }
-            if (dr2)
+            var msg = arg.Channel.GetCachedMessage(arg.Id);
+
+            foreach (var embed in msg.Embeds)
             {
-                _logger.LogInformation("Dirt Rally 2.0 Clip found and reposted.");
-                await toChan.SendMessageAsync(arg.Content);                    
+                //Console.WriteLine($"{Globals.CurrentTime} Detect      Checking Embed for Dirt Rally 2.0");
+                bool dr2 = embed.Description.ToLower().Contains("dirt rally 2.0");
+                if (dr2)
+                {
+                    //Console.WriteLine($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip found and reposted");
+                    await toChan.SendMessageAsync(embed.Url);
+                }
+                else
+                {
+                    //Console.WriteLine($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip NOT found and ignored");
+                }
             }
-            
-            _logger.LogDebug(arg.Content);
-            await Task.CompletedTask;            
+
+            //Console.WriteLine($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
+            //await Task.CompletedTask;          
         }
 
         private Task Client_Log(LogMessage arg)
