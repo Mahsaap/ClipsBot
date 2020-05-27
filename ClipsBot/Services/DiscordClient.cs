@@ -31,14 +31,14 @@ namespace ClipsBot.Services
             API.Settings.ClientId = TwitchCreds.ClientID;
             API.Settings.Secret = TwitchCreds.Secret;
 
-            _logger.LogInformation("Twitch API Initiated");
+            _logger.LogInformation($"{Globals.CurrentTime} Twitch API Initiated");
         }
 
         public async Task RunAsync()
         {
             Client = new DiscordSocketClient(new DiscordSocketConfig { LogLevel = LogSeverity.Debug, MessageCacheSize = 100 });
 
-            _logger.LogInformation("Client Created!");
+            _logger.LogInformation($"{Globals.CurrentTime} Client Created!");
 
             Client.Log += Client_Log;
             Client.MessageReceived += Client_MessageReceived;
@@ -46,7 +46,7 @@ namespace ClipsBot.Services
             await Client.LoginAsync(TokenType.Bot, DiscordToken.Token);
             await Client.StartAsync();
 
-            _logger.LogInformation("Discord Client Started!");
+            _logger.LogInformation($"{Globals.CurrentTime} Discord Client Started!");
 
             await Task.Delay(-1);
         }
@@ -69,12 +69,12 @@ namespace ClipsBot.Services
 
                 if (clip.Game.ToLower() == "dirt rally 2.0")
                 {
-                    _logger.LogInformation($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip found and reposted");
+                    _logger.LogInformation("Dirt Rally 2.0 Clip found and reposted");
                     await toChan.SendMessageAsync(clip.Url);
                 }
                 else
                 {
-                    _logger.LogInformation($"{Globals.CurrentTime} Detect      Dirt Rally 2.0 Clip NOT found and ignored");
+                    _logger.LogInformation("Dirt Rally 2.0 Clip NOT found and ignored");
                 }
                 _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");      
             }
@@ -89,25 +89,26 @@ namespace ClipsBot.Services
 
         private Task Client_Log(LogMessage arg)
         {
+            var layout = $"{Globals.CurrentTime} " + arg.Message;
             switch (arg.Severity)
             {
                 case LogSeverity.Critical:
-                    _logger.LogCritical(arg.Message);
+                    _logger.LogCritical(layout);
                     break;
                 case LogSeverity.Debug:
-                    _logger.LogDebug(arg.Message);
+                    _logger.LogDebug(layout);
                     break;
                 case LogSeverity.Error:
-                    _logger.LogError(arg.Message);
+                    _logger.LogError(layout);
                     break;
                 case LogSeverity.Info:
-                    _logger.LogInformation(arg.Message);
+                    _logger.LogInformation(layout);
                     break;
                 case LogSeverity.Verbose:
-                    _logger.LogTrace(arg.Message);
+                    _logger.LogTrace(layout);
                     break;
                 case LogSeverity.Warning:
-                    _logger.LogWarning(arg.Message);
+                    _logger.LogWarning(layout);
                     break;
                 default:
                     break;
@@ -117,13 +118,13 @@ namespace ClipsBot.Services
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Application started");
+            _logger.LogInformation($"{Globals.CurrentTime} Application started");
             await RunAsync();
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogWarning("Application shutting down");
+            _logger.LogWarning($"{Globals.CurrentTime} Application shutting down");
             return Task.CompletedTask;
         }
     }
