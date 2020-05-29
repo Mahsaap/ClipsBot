@@ -63,7 +63,7 @@ namespace ClipsBot.Services
             var slug = link[pos..];
             try
             {
-                var clip = await API.V5.Clips.GetClipAsync(slug);                
+                var clip = await API.V5.Clips.GetClipAsync(slug);
 
                 var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
 
@@ -76,15 +76,9 @@ namespace ClipsBot.Services
                 {
                     _logger.LogInformation("Dirt Rally 2.0 Clip NOT found and ignored");
                 }
-                _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");      
+                _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
             }
             catch { }
-
-            /*
-             * https://clips.twitch.tv/CredulousAssiduousWombatMrDestructoid
-             * https://www.twitch.tv/juniorrallychampionship/clip/BoredPoorCardKappaClaus
-             */
-            
         }
 
         private Task Client_Log(LogMessage arg)
