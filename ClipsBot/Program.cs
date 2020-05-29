@@ -10,7 +10,7 @@ namespace ClipsBot
     {
         public static async Task Main(string[] args)
         {
-            await CreateHostBuilder(args).RunConsoleAsync();            
+            await CreateHostBuilder(args).RunConsoleAsync();
         }
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
@@ -26,5 +26,4 @@ namespace ClipsBot
             .UseConsoleLifetime();
     }
 }
-    
 
