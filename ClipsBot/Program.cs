@@ -1,4 +1,5 @@
-﻿using ClipsBot.Services;
+﻿using ClipsBot.Ignore;
+using ClipsBot.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,7 @@ namespace ClipsBot
             })
             .ConfigureServices(services =>
             {
-                services.AddScoped<Twitch>();
+                services.AddTwitchLibApi(TwitchCreds.ClientID, TwitchCreds.Secret, 800);
                 services.AddHostedService<DiscordClient>();
             })
             .UseConsoleLifetime();

@@ -6,8 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using TwitchLib.Api;
-using TwitchLib.Api.V5.Models.Clips;
+using TwitchLib.Api.Interfaces;
 
 namespace ClipsBot.Services
 {
@@ -16,9 +15,9 @@ namespace ClipsBot.Services
         public DiscordSocketClient Client { get; private set; }
 
         private readonly ILogger<DiscordClient> _logger;
-        private readonly TwitchAPI _api;
+        private readonly ITwitchAPI _api;
 
-        public DiscordClient(ILogger<DiscordClient> logger, TwitchAPI api)
+        public DiscordClient(ILogger<DiscordClient> logger, ITwitchAPI api)
         {
             _logger = logger;
             _api = api;
@@ -48,9 +47,18 @@ namespace ClipsBot.Services
             if (arg.Channel.Id != Channels.CheckChannel) return;
 
             var linkParser = new Regex(@"\b(?:https?://|www\.)\S+\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            var link = linkParser.Matches(arg.Content)[0].Value;
+            var parse = linkParser.Matches(arg.Content);
+
+            if (parse.Count == 0)
+            {
+                _logger.LogInformation("No link found");
+                return;
+            }
+
+            var link = parse[0].Value;
             int pos = link.LastIndexOf("/") + 1;
             var slug = link[pos..];
+
             try
             {
                 var clip = await _api.V5.Clips.GetClipAsync(slug);
@@ -59,8 +67,10 @@ namespace ClipsBot.Services
 
                 if (clip.Game.ToLower() == "dirt rally 2.0")
                 {
+                    var n = clip.Url.IndexOf('?');
+                    var s = clip.Url.Substring(0, n != -1 ? n : clip.Url.Length);
+                    await toChan.SendMessageAsync(s);
                     _logger.LogInformation("Dirt Rally 2.0 Clip found and reposted");
-                    await toChan.SendMessageAsync(clip.Url);
                 }
                 else
                 {
@@ -68,13 +78,7 @@ namespace ClipsBot.Services
                 }
                 _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
             }
-            catch { }
-
-            /*
-             * https://clips.twitch.tv/CredulousAssiduousWombatMrDestructoid
-             * https://www.twitch.tv/juniorrallychampionship/clip/BoredPoorCardKappaClaus
-             */
-
+            catch { } // If fails ignore
         }
 
         private Task Client_Log(LogMessage arg)
