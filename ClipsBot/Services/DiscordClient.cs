@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api.Interfaces;
+using TwitchLib.Api.V5.Models.Clips;
 
 namespace ClipsBot.Services
 {
@@ -69,7 +70,7 @@ namespace ClipsBot.Services
                 {
                     var n = clip.Url.IndexOf('?');
                     var s = clip.Url.Substring(0, n != -1 ? n : clip.Url.Length);
-                    await toChan.SendMessageAsync(s);
+                    await toChan.SendMessageAsync($"<{s}>", embed: SetupEmbed(clip,s).Build());
                     _logger.LogInformation("Dirt Rally 2.0 Clip found and reposted");
                 }
                 else
@@ -108,6 +109,39 @@ namespace ClipsBot.Services
                     break;
             }
             return Task.CompletedTask;
+        }
+
+        private EmbedBuilder SetupEmbed(Clip clip, string s)
+        {
+            EmbedBuilder eb = new EmbedBuilder()
+            {
+                Color = new Color(217, 104, 15),
+                Title = "📎 " + clip.Broadcaster.DisplayName,
+                Description = clip.Title,
+                Url = clip.Broadcaster.ChannelUrl
+            };
+            eb.AddField(x =>
+            {
+                x.Name = $"Clipped By";
+                x.Value = clip.Curator.DisplayName;
+                x.IsInline = true;
+            });
+            eb.AddField(x =>
+            {
+                x.Name = $"Duration";
+                x.Value = clip.Duration;
+                x.IsInline = true;
+            });
+            eb.AddField(x =>
+            {
+                x.Name = $"Views";
+                x.Value = clip.Views;
+                x.IsInline = true;
+            });
+            eb.WithImageUrl(clip.Thumbnails.Medium);
+            eb.WithThumbnailUrl(clip.Broadcaster.Logo);
+            eb.WithFooter(x => { x.Text = s; });
+            return eb;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
