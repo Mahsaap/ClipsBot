@@ -1,8 +1,11 @@
 ﻿using ClipsBot.Ignore;
 using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,12 +19,16 @@ namespace ClipsBot.Services
         public DiscordSocketClient Client { get; private set; }
 
         private readonly ILogger<DiscordClient> _logger;
+        private readonly IServiceProvider _service;
         private readonly ITwitchAPI _api;
+        private readonly CommandService _commands;
 
-        public DiscordClient(ILogger<DiscordClient> logger, ITwitchAPI api)
+        public DiscordClient(ILogger<DiscordClient> logger, IServiceProvider service, ITwitchAPI api, CommandService commands)
         {
             _logger = logger;
+            _service = service;
             _api = api;
+            _commands = commands;
         }
 
         public async Task RunAsync()
@@ -32,6 +39,8 @@ namespace ClipsBot.Services
 
             Client.Log += Client_Log;
             Client.MessageReceived += Client_MessageReceived;
+            Client.MessageReceived += HandleCommandAsync;
+            Client.Connected += Client_Connected;
 
             await Client.LoginAsync(TokenType.Bot, DiscordToken.Token);
             await Client.StartAsync();
@@ -39,6 +48,11 @@ namespace ClipsBot.Services
             _logger.LogInformation($"{Globals.CurrentTime} Discord Client Started!");
 
             await Task.Delay(-1);
+        }
+
+        private async Task Client_Connected()
+        {
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _service);
         }
 
         private async Task Client_MessageReceived(SocketMessage arg)
@@ -80,6 +94,22 @@ namespace ClipsBot.Services
                 _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
             }
             catch { } // If fails ignore
+        }
+
+        private async Task HandleCommandAsync(SocketMessage messageParam)
+        {
+            if (!(messageParam is SocketUserMessage message)) return;
+            int argPos = 0;
+            if (!(message.HasCharPrefix('!', ref argPos) || message.HasMentionPrefix(Client.CurrentUser, ref argPos))) return;
+            SocketCommandContext context = new SocketCommandContext(Client, message);
+            IResult result = await _commands.ExecuteAsync(context, argPos, _service);
+            if (!result.IsSuccess)
+            {
+                if (result.ErrorReason == "Unknown command.") return;
+                //await context.Channel.SendMessageAsync(result.ErrorReason);
+                Console.WriteLine($"User:{context.User.Username}#{context.User.Discriminator}," +
+                    $"Id:{context.User.Id},Message:{context.Message.Content},Error:{result.ErrorReason}");
+            }
         }
 
         private Task Client_Log(LogMessage arg)

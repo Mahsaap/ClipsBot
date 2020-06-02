@@ -1,5 +1,6 @@
 ﻿using ClipsBot.Ignore;
 using ClipsBot.Services;
+using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,11 @@ namespace ClipsBot
             {
                 services.AddTwitchLibApi(TwitchCreds.ClientID, TwitchCreds.Secret, 800);
                 services.AddHostedService<DiscordClient>();
+                services.AddSingleton(new CommandService(new CommandServiceConfig
+                {
+                    ThrowOnError = true,
+                    CaseSensitiveCommands = false
+                }));
             })
             .UseConsoleLifetime();
     }
