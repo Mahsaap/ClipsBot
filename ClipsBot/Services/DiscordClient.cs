@@ -70,30 +70,33 @@ namespace ClipsBot.Services
                 return;
             }
 
-            var link = parse[0].Value;
-            int pos = link.LastIndexOf("/") + 1;
-            var slug = link[pos..];
-
-            try
+            for (var i = 0; i < parse.Count; i++)
             {
-                var clip = await _api.V5.Clips.GetClipAsync(slug);
+                var link = parse[i].Value;
+                int pos = link.LastIndexOf("/") + 1;
+                var slug = link[pos..];
 
-                var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
+                try
+                {
+                    var clip = await _api.V5.Clips.GetClipAsync(slug);
 
-                if (clip.Game.ToLower() == "dirt rally 2.0")
-                {
-                    var n = clip.Url.IndexOf('?');
-                    var s = clip.Url.Substring(0, n != -1 ? n : clip.Url.Length);
-                    await toChan.SendMessageAsync($"<{s}>", embed: SetupEmbed(clip,s).Build());
-                    _logger.LogInformation("Dirt Rally 2.0 Clip found and reposted");
+                    var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
+
+                    if (clip.Game.ToLower() == "dirt rally 2.0")
+                    {
+                        var n = clip.Url.IndexOf('?');
+                        var s = clip.Url.Substring(0, n != -1 ? n : clip.Url.Length);
+                        await toChan.SendMessageAsync($"<{s}>", embed: SetupEmbed(clip, s).Build());
+                        _logger.LogInformation("Dirt Rally 2.0 Clip found and reposted");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Dirt Rally 2.0 Clip NOT found and ignored");
+                    }
+                    _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
                 }
-                else
-                {
-                    _logger.LogInformation("Dirt Rally 2.0 Clip NOT found and ignored");
-                }
-                _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
+                catch { } // If fails ignore
             }
-            catch { } // If fails ignore
         }
 
         private async Task HandleCommandAsync(SocketMessage messageParam)
