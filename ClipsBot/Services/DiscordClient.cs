@@ -1,9 +1,10 @@
-﻿using ClipsBot.Ignore;
+﻿using ClipsBot.Models.Configuration;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -22,12 +23,14 @@ namespace ClipsBot.Services
         private readonly IServiceProvider _service;
         private readonly ITwitchAPI _api;
         private readonly CommandService _commands;
+        private readonly DiscordOptions _discordOptions;
+        private readonly TwitchOptions _twitchOptions;
 
-        public DiscordClient(ILogger<DiscordClient> logger, IServiceProvider service, ITwitchAPI api, CommandService commands)
+        public DiscordClient(ILogger<DiscordClient> logger, IOptions<DiscordOptions> discordOptions, IOptions<TwitchOptions> twitchOptions, CommandService commands)
         {
             _logger = logger;
-            _service = service;
-            _api = api;
+            _discordOptions = discordOptions.Value;
+            _twitchOptions = twitchOptions.Value;
             _commands = commands;
         }
 
@@ -42,7 +45,7 @@ namespace ClipsBot.Services
             Client.MessageReceived += HandleCommandAsync;
             Client.Connected += Client_Connected;
 
-            await Client.LoginAsync(TokenType.Bot, DiscordToken.Token);
+            await Client.LoginAsync(TokenType.Bot, _discordOptions.Token);
             await Client.StartAsync();
 
             _logger.LogInformation($"{Globals.CurrentTime} Discord Client Started!");
@@ -59,7 +62,7 @@ namespace ClipsBot.Services
         {
             if (string.IsNullOrEmpty(arg.Content)) return;
             if (arg.Author.Id == Client.CurrentUser.Id || arg.Author.IsBot) return;
-            if (arg.Channel.Id != Channels.CheckChannel) return;
+            if (arg.Channel.Id != _discordOptions.ChannelList.CheckChannel) return;
 
             var linkParser = new Regex(@"\b(?:https?://|www\.)\S+\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var parse = linkParser.Matches(arg.Content);
@@ -80,7 +83,7 @@ namespace ClipsBot.Services
                 {
                     var clip = await _api.V5.Clips.GetClipAsync(slug);
 
-                    var toChan = Client.GetChannel(Channels.ToChannel) as ISocketMessageChannel;
+                    var toChan = Client.GetChannel(_discordOptions.ChannelList.ToChannel) as ISocketMessageChannel;
 
                     if (clip.Game.ToLower() == "dirt rally 2.0")
                     {
@@ -180,6 +183,8 @@ namespace ClipsBot.Services
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation($"{Globals.CurrentTime} Application started");
+            _logger.LogInformation($"{Globals.CurrentTime} {string.Join(',', _discordOptions.ChannelList)}");
+            _logger.LogInformation($"{Globals.CurrentTime} {_twitchOptions.Credentials.ClientId}");
             await RunAsync();
         }
 

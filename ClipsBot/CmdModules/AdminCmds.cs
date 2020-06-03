@@ -16,7 +16,7 @@ namespace ClipsBot.CmdModules
 {
     [Name("Admin")]
     [RequireContext(ContextType.DM)]
-    [RequireID]
+    [RequireID()]
     public class AdminCmds : ModuleBase<SocketCommandContext>
     {
         [Command("version")]
