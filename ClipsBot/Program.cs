@@ -1,5 +1,4 @@
-﻿using ClipsBot.Ignore;
-using ClipsBot.Preconditions;
+﻿using ClipsBot.Models.Configuration;
 using ClipsBot.Services;
 using Discord.Commands;
 using Microsoft.Extensions.Configuration;
@@ -27,9 +26,11 @@ namespace ClipsBot
             {
                 logging.SetMinimumLevel(LogLevel.Information);
             })
-            .ConfigureServices(services =>
+            .ConfigureServices((hostingContext, services) =>
             {
-                services.AddTwitchLibApi(TwitchCreds.ClientId, TwitchCreds.ClientSecret, 800);
+                services.Configure<DiscordOptions>(hostingContext.Configuration.GetSection("Discord"));
+                services.Configure<TwitchOptions>(hostingContext.Configuration.GetSection("Twitch"));
+                services.AddTwitchLibApi(hostingContext.Configuration["Twitch:Credentials:ClientId"], hostingContext.Configuration["Twitch:Credentials:ClientSecret"], 800);
                 services.AddHostedService<DiscordClient>();
                 services.AddSingleton(new CommandService(new CommandServiceConfig
                 {

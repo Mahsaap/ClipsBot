@@ -6,12 +6,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Api.V5.Models.Clips;
+
 
 namespace ClipsBot.Services
 {
@@ -26,11 +28,13 @@ namespace ClipsBot.Services
         private readonly DiscordOptions _discordOptions;
         private readonly TwitchOptions _twitchOptions;
 
-        public DiscordClient(ILogger<DiscordClient> logger, IOptions<DiscordOptions> discordOptions, IOptions<TwitchOptions> twitchOptions, CommandService commands)
+        public DiscordClient(ILogger<DiscordClient> logger, IOptions<DiscordOptions> discordOptions, IOptions<TwitchOptions> twitchOptions, IServiceProvider service, ITwitchAPI api, CommandService commands)
         {
             _logger = logger;
             _discordOptions = discordOptions.Value;
             _twitchOptions = twitchOptions.Value;
+            _service = service;
+            _api = api;
             _commands = commands;
         }
 
@@ -56,6 +60,7 @@ namespace ClipsBot.Services
         private async Task Client_Connected()
         {
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _service);
+            await Client.SetGameAsync("Clip Rollin'");
         }
 
         private async Task Client_MessageReceived(SocketMessage arg)
@@ -73,19 +78,35 @@ namespace ClipsBot.Services
                 return;
             }
 
+            List<string> checkDuplicate = new List<string>();
+
             for (var i = 0; i < parse.Count; i++)
             {
                 var link = parse[i].Value;
+                if (checkDuplicate != null)
+                {
+                    if (checkDuplicate.Contains(link))
+                    {
+                        _logger.LogInformation("Single message duplicate link ignored");
+                        goto Skip;
+                    }
+                }
+                checkDuplicate.Add(link);
+
+                if (!link.Contains("clip"))
+                {
+                    _logger.LogInformation("Unknown link/video ignored");
+                    goto Skip;
+                }
                 int pos = link.LastIndexOf("/") + 1;
                 var slug = link[pos..];
 
                 try
                 {
                     var clip = await _api.V5.Clips.GetClipAsync(slug);
-
                     var toChan = Client.GetChannel(_discordOptions.ChannelList.ToChannel) as ISocketMessageChannel;
 
-                    if (clip.Game.ToLower() == "dirt rally 2.0")
+                    if (clip != null && clip.Game.ToLower() == "dirt rally 2.0")
                     {
                         var n = clip.Url.IndexOf('?');
                         var s = clip.Url.Substring(0, n != -1 ? n : clip.Url.Length);
@@ -96,10 +117,12 @@ namespace ClipsBot.Services
                     {
                         _logger.LogInformation("Dirt Rally 2.0 Clip NOT found and ignored");
                     }
-                    _logger.LogDebug($"{Globals.CurrentTime} DetectLOG   {arg.Content}");
                 }
                 catch { } // If fails ignore
+            Skip:
+                continue;
             }
+            _logger.LogDebug($"{Globals.CurrentTime} > {arg.Content}");
         }
 
         private async Task HandleCommandAsync(SocketMessage messageParam)
@@ -108,12 +131,14 @@ namespace ClipsBot.Services
             int argPos = 0;
             if (!(message.HasCharPrefix('!', ref argPos) || message.HasMentionPrefix(Client.CurrentUser, ref argPos))) return;
             SocketCommandContext context = new SocketCommandContext(Client, message);
+            _logger.LogInformation($"User:{context.User.Username}#{context.User.Discriminator}," +
+                    $"Id:{context.User.Id},Message:{context.Message.Content}");
             IResult result = await _commands.ExecuteAsync(context, argPos, _service);
             if (!result.IsSuccess)
             {
                 if (result.ErrorReason == "Unknown command.") return;
                 //await context.Channel.SendMessageAsync(result.ErrorReason);
-                Console.WriteLine($"User:{context.User.Username}#{context.User.Discriminator}," +
+                _logger.LogInformation($"User:{context.User.Username}#{context.User.Discriminator}," +
                     $"Id:{context.User.Id},Message:{context.Message.Content},Error:{result.ErrorReason}");
             }
         }

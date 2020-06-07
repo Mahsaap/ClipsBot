@@ -1,6 +1,4 @@
-﻿using ClipsBot.Models.Configuration;
-using Discord.Commands;
-using Microsoft.Extensions.Options;
+﻿using Discord.Commands;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -9,17 +7,10 @@ namespace ClipsBot.Preconditions
 {
     class RequireID : PreconditionAttribute
     {
-        private readonly DiscordOptions _discordOptions;
-
-        public RequireID(IOptions<DiscordOptions> discordOptions)
-        {
-            _discordOptions = discordOptions.Value;
-        }
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-
-            var ids = new List<ulong> { };
-            foreach (var id in _discordOptions.AdminId.Ids)
+            var ids = new List<ulong> { 290501197255671809, 88798728948809728 };
+            foreach (var id in ids.ToArray())
             {
                 ids.Add(id);
             }

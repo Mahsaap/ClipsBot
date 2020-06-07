@@ -2,7 +2,7 @@
 {
     public class DiscordOptions
     {
-        public Admin AdminId { get; set; }
+        public ulong[] AdminIds { get; set; }
         public Channels ChannelList { get; set; }
         public string Token { get; set; }
     }
@@ -11,10 +11,5 @@
     {
         public ulong CheckChannel { get; set; }
         public ulong ToChannel { get; set; }
-    }
-
-    public class Admin
-    {
-        public ulong[] Ids { get; set; }
     }
 }
